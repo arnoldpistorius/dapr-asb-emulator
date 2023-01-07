@@ -15,6 +15,20 @@ public class TopicController : ControllerBase
     {
         this.topicService = topicService;
     }
+
+    [HttpGet(Routes.GetAllTopics)]
+    public async Task<IActionResult> GetAllTopics()
+    {
+        try
+        {
+            var topics = await topicService.GetAllTopics();
+            return Ok(topics.Select(Topic.FromDomainTopic));
+        }
+        catch
+        {
+            return Problem(statusCode: StatusCodes.Status500InternalServerError);
+        }
+    }
     
     [HttpPost(Routes.CreateTopic)]
     public async Task<IActionResult> CreateTopic([FromBody] Topic topic)
@@ -22,7 +36,7 @@ public class TopicController : ControllerBase
         try
         {
             var createdTopic = await topicService.CreateTopic(topic.Name);
-            return Ok(new Topic(createdTopic.Name));
+            return Ok(Topic.FromDomainTopic(createdTopic));
         }
         catch (TopicNameValidationFailedException exception)
         {

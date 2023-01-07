@@ -70,7 +70,7 @@ public class TopicControllerTests : IAsyncDisposable
         await EnsureTopic(topic);
         
         // Act
-        var response = await client.DeleteAsync(Routes.CreateRemoveTopicRoute(topic.Name));
+        var response = await client.DeleteAsync(Routes.RemoveTopicRoute(topic.Name));
         
         // Assert
         response.IsSuccessStatusCode.Should().BeTrue();
@@ -84,11 +84,47 @@ public class TopicControllerTests : IAsyncDisposable
         string topicName = "this-topic-does-not-exist";
         
         // Act
-        var response = await client.DeleteAsync(Routes.CreateRemoveTopicRoute(topicName));
+        var response = await client.DeleteAsync(Routes.RemoveTopicRoute(topicName));
         
         // Assert
         response.IsSuccessStatusCode.Should().BeFalse();
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task GetAllTopics_NoTopics_ReturnsEmptyArray()
+    {
+        // Arrange
+        
+        // Act
+        var response = await client.GetFromJsonAsync<Topic[]>(Routes.GetAllTopicsRoute());
+        
+        // Assert
+        response.Should().NotBeNull().And.BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetAllTopics_ThreeTopics_ReturnsExactlyThreeTopics()
+    {
+        // Arrange
+        var topic1 = new Topic("topic1");
+        var topic2 = new Topic("topic2");
+        var topic3 = new Topic("topic3");
+        
+        await EnsureTopic(topic1);
+        await EnsureTopic(topic2);
+        await EnsureTopic(topic3);
+        
+        // Act
+        var response = await client.GetFromJsonAsync<Topic[]>(Routes.GetAllTopicsRoute());
+        
+        // Assert
+        response.Should().NotBeNull().And.Contain(new []
+        {
+            topic1,
+            topic2,
+            topic3
+        });
     }
 
     async Task EnsureTopic(Topic topic)

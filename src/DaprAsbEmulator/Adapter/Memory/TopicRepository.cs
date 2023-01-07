@@ -38,4 +38,10 @@ public class TopicRepository : ITopicRepository
 
         return Task.CompletedTask;
     }
+
+    public Task<IReadOnlyCollection<Topic>> GetAllTopics()
+    {
+        using var readLock = rwLock.ReadLock();
+        return Task.FromResult<IReadOnlyCollection<Topic>>(topics.ToList().AsReadOnly());
+    }
 }

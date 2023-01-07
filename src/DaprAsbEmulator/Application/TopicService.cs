@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using DaprAsbEmulator.Application.Exceptions;
 using DaprAsbEmulator.Model;
 using DaprAsbEmulator.Ports;
@@ -30,6 +31,12 @@ public class TopicService : ITopicService
         var topic = await topicRepository.GetTopic(name);
         await topicRepository.RemoveTopic(topic);
     }
+
+    public async Task<ImmutableArray<Topic>> GetAllTopics()
+    {
+        var topics = await topicRepository.GetAllTopics();
+        return topics.ToImmutableArray();
+    }
 }
 
 public interface ITopicRepository
@@ -37,4 +44,5 @@ public interface ITopicRepository
     Task<Topic> GetTopic(string name);
     Task AddTopic(Topic topic);
     Task RemoveTopic(Topic topic);
+    Task<IReadOnlyCollection<Topic>> GetAllTopics();
 }

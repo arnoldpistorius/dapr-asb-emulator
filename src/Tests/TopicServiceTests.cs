@@ -9,12 +9,19 @@ namespace Tests;
 
 public class TopicServiceTests
 {
+    readonly ITopicRepository topicRepository;
+    readonly ITopicService service;
+    
+    public TopicServiceTests()
+    {
+        topicRepository = new TopicRepository();
+        service = new TopicService(topicRepository);
+    }
+    
     [Fact]
     public async Task CreateTopic_NewTopic_TopicIsCreated()
     {
         // Arrange
-        ITopicRepository topicRepository = new TopicRepository();
-        ITopicService service = new TopicService(topicRepository);
         
         // Act
         var createdTopic = await service.CreateTopic("a-topic-name");
@@ -31,9 +38,7 @@ public class TopicServiceTests
     public async Task CreateTopic_ExistingTopic_TopicIsNotCreated()
     {
         // Arrange
-        ITopicRepository topicRepository = new TopicRepository();
-        ITopicService service = new TopicService(topicRepository);
-        _ = await service.CreateTopic("a-topic-name");
+        await EnsureTopic("a-topic-name");
         
         // Act/Assert
         await service.Awaiting(x => x.CreateTopic("a-topic-name"))
@@ -64,8 +69,6 @@ public class TopicServiceTests
     public async Task CreateTopic_InvalidTopicName_TopicIsNotCreated(string topicName)
     {
         // Arrange
-        ITopicRepository topicRepository = new TopicRepository();
-        ITopicService service = new TopicService(topicRepository);
         
         // Act/Assert
         await service.Awaiting(x => x.CreateTopic(topicName))
@@ -91,8 +94,6 @@ public class TopicServiceTests
     public async Task CreateTopic_ValidTopicName_TopicIsCreated(string topicName)
     {
         // Arrange
-        ITopicRepository topicRepository = new TopicRepository();
-        ITopicService service = new TopicService(topicRepository);
         
         // Act/Assert
         await service.Awaiting(x => x.CreateTopic(topicName))
@@ -104,9 +105,7 @@ public class TopicServiceTests
     public async Task RemoveTopic_ExistingTopic_TopicIsRemoved()
     {
         // Arrange
-        ITopicRepository topicRepository = new TopicRepository();
-        ITopicService service = new TopicService(topicRepository);
-        _ = await service.CreateTopic("a-topic-name");
+        await EnsureTopic("a-topic-name");
         
         // Act
         await service.RemoveTopic("a-topic-name");
@@ -121,12 +120,55 @@ public class TopicServiceTests
     public async Task RemoveTopic_NonExistingTopic_ExceptionIsRaised()
     {
         // Arrange
-        ITopicRepository topicRepository = new TopicRepository();
-        ITopicService service = new TopicService(topicRepository);
         
         // Act/Assert
         await service.Awaiting(x => x.RemoveTopic("a-topic-name"))
             .Should()
             .ThrowExactlyAsync<TopicNotFoundException>();
+    }
+
+    [Fact]
+    public async Task GetAllTopics_NoTopics_ReturnsEmptyArray()
+    {
+        // Arrange
+        
+        // Act
+        var allTopics = await service.GetAllTopics();
+        
+        // Assert
+        allTopics.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetAllTopics_ThreeTopics_ReturnsExactlyThreeTopics()
+    {
+        // Arrange
+        var topic1 = await EnsureTopic("topic1");
+        var topic2 = await EnsureTopic("topic2");
+        var topic3 = await EnsureTopic("topic3");
+        
+        // Act
+        var allTopics = await service.GetAllTopics();
+        
+        // Assert
+        allTopics.Should().HaveCount(3).And.Contain(new[]
+        {
+            topic1,
+            topic2,
+            topic3
+        });
+    }
+
+    async Task<Topic> EnsureTopic(string topicName)
+    {
+        try
+        {
+            return await service.CreateTopic(topicName);
+        }
+        catch (TopicAlreadyExistsException)
+        {
+            // Kinda hacky (until a GetTopic method is built on ITopicService)
+            return await topicRepository.GetTopic(topicName);
+        }
     }
 }
