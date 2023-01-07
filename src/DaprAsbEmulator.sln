@@ -3,6 +3,10 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DaprAsbEmulator", "DaprAsbEmulator\DaprAsbEmulator.csproj", "{4E0CC041-EF08-4649-89FB-D25E1D31EE48}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "Tests\Tests.csproj", "{8B821E97-83D2-4F57-8E6F-F4D65F56F64A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -10,5 +14,15 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4E0CC041-EF08-4649-89FB-D25E1D31EE48}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4E0CC041-EF08-4649-89FB-D25E1D31EE48}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4E0CC041-EF08-4649-89FB-D25E1D31EE48}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4E0CC041-EF08-4649-89FB-D25E1D31EE48}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8B821E97-83D2-4F57-8E6F-F4D65F56F64A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8B821E97-83D2-4F57-8E6F-F4D65F56F64A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8B821E97-83D2-4F57-8E6F-F4D65F56F64A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8B821E97-83D2-4F57-8E6F-F4D65F56F64A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
