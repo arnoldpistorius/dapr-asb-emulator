@@ -127,6 +127,33 @@ public class TopicControllerTests : IAsyncDisposable
         });
     }
 
+    [Fact]
+    public async Task GetTopic_TopicExists_ReturnsTheTopic()
+    {
+        // Arrange
+        var topic = new Topic("some-cool-topic");
+        await EnsureTopic(topic);
+        
+        // Act
+        var response = await client.GetFromJsonAsync<Topic>(Routes.GetTopicRoute(topic.Name));
+        
+        // Assert
+        response.Should().NotBeNull().And.BeEquivalentTo(topic);
+    }
+    
+    [Fact]
+    public async Task GetTopic_TopicNotExists_ReturnsNotFoundStatusCode()
+    {
+        // Arrange
+        
+        // Act
+        var response = await client.GetAsync(Routes.GetTopicRoute("some-cool-topic"));
+        
+        // Assert
+        response.IsSuccessStatusCode.Should().BeFalse();
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
     async Task EnsureTopic(Topic topic)
     {
         var response = await client.PostAsJsonAsync(Routes.CreateTopicRoute(), topic);

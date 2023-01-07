@@ -13,7 +13,7 @@ public class TopicRepository : ITopicRepository
     public Task<Topic> GetTopic(string name)
     {
         using var readLock = rwLock.ReadLock();
-        return Task.FromResult(topics.FirstOrDefault(x => x.Name == name) ??
+        return Task.FromResult(topics.FirstOrDefault(x => Topic.NameEqualityComparer.Instance.Equals(x.Name, name)) ??
                                throw new TopicNotFoundException(name));
     }
 

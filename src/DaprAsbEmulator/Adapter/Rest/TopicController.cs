@@ -29,6 +29,24 @@ public class TopicController : ControllerBase
             return Problem(statusCode: StatusCodes.Status500InternalServerError);
         }
     }
+
+    [HttpGet(Routes.GetTopic)]
+    public async Task<IActionResult> GetTopic([FromRoute(Name = Routes.ParamTopicName)] string topicName)
+    {
+        try
+        {
+            var topic = await topicService.GetTopic(topicName);
+            return Ok(Topic.FromDomainTopic(topic));
+        }
+        catch (TopicNotFoundException exception)
+        {
+            return NotFound(exception.Message);
+        }
+        catch
+        {
+            return Problem(statusCode: StatusCodes.Status500InternalServerError);
+        }
+    }
     
     [HttpPost(Routes.CreateTopic)]
     public async Task<IActionResult> CreateTopic([FromBody] Topic topic)

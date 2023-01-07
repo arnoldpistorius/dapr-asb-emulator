@@ -8,4 +8,5 @@ public interface ITopicService
     Task<Topic> CreateTopic(string name);
     Task RemoveTopic(string name);
     Task<ImmutableArray<Topic>> GetAllTopics();
+    Task<Topic> GetTopic(string topicName);
 }

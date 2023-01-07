@@ -37,6 +37,12 @@ public class TopicService : ITopicService
         var topics = await topicRepository.GetAllTopics();
         return topics.ToImmutableArray();
     }
+
+    public async Task<Topic> GetTopic(string topicName)
+    {
+        var topic = await topicRepository.GetTopic(topicName);
+        return topic;
+    }
 }
 
 public interface ITopicRepository

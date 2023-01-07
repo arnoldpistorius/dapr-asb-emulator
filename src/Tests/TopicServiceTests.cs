@@ -159,6 +159,32 @@ public class TopicServiceTests
         });
     }
 
+    [Fact]
+    public async Task GetTopic_TopicExists_ReturnsTheTopic()
+    {
+        // Arrange
+        var topic = await EnsureTopic("a-nice-topic");
+        
+        // Act
+        var getTopic = await service.GetTopic(topic.Name);
+        
+        // Assert
+        getTopic.Should().BeEquivalentTo(topic);
+    }
+
+    [Fact]
+    public async Task GetTopic_TopicWithDifferentCasing_ReturnsTheTopic()
+    {
+        // Arrange
+        var topic = await EnsureTopic("A-Nice-Topic");
+        
+        // Act
+        var getTopic = await service.GetTopic("a-nice-topic");
+        
+        // Assert
+        getTopic.Should().BeEquivalentTo(topic);
+    }
+
     async Task<Topic> EnsureTopic(string topicName)
     {
         try
@@ -167,8 +193,7 @@ public class TopicServiceTests
         }
         catch (TopicAlreadyExistsException)
         {
-            // Kinda hacky (until a GetTopic method is built on ITopicService)
-            return await topicRepository.GetTopic(topicName);
+            return await service.GetTopic(topicName);
         }
     }
 }
