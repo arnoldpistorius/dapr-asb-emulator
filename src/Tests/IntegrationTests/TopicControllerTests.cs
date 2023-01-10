@@ -154,6 +154,40 @@ public class TopicControllerTests : IAsyncDisposable
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    [Fact]
+    public async Task CreateTopicSubscription_TopicExistsSubscriptionNotExists_ReturnsTopicSubscription()
+    {
+        // Arrange
+        var topicName = "a-topic";
+        var subscriptionName = "a-subscription";
+        await EnsureTopic(new Topic(topicName));
+
+        // Act
+        var response = await client.PostAsJsonAsync(Routes.CreateTopicSubscriptionRoute(topicName), new CreateTopicRequestBody(subscriptionName));
+
+        // Assert
+        response.IsSuccessStatusCode.Should().BeTrue();
+        var topicSubscription = await response.Content.ReadFromJsonAsync<TopicSubscription>();
+        topicSubscription.Should().Match<TopicSubscription>(x => x.TopicName == topicName && x.SubscriptionName == subscriptionName);
+    }
+
+    [Fact]
+    public async Task CreateTopicSubscription_TopicSubscriptionExists_ReturnsConflict()
+    {
+        // Arrange
+        var topicName = "topic-name";
+        var subscriptionName = "subscription-name";
+        await EnsureTopicSubscription(topicName, subscriptionName);
+        
+        // Act
+        var response = await client.PostAsJsonAsync(Routes.CreateTopicSubscriptionRoute(topicName),
+            new CreateTopicRequestBody(subscriptionName));
+        
+        // Assert
+        response.IsSuccessStatusCode.Should().BeFalse();
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
     async Task EnsureTopic(Topic topic)
     {
         var response = await client.PostAsJsonAsync(Routes.CreateTopicRoute(), topic);
@@ -161,6 +195,20 @@ public class TopicControllerTests : IAsyncDisposable
         {
             var error = await response.Content.ReadAsStringAsync();
             throw new InvalidOperationException($"Could not create topic: {error}");
+        }
+    }
+
+    async Task EnsureTopicSubscription(string topicName, string topicSubscriptionName)
+    {
+        var topic = new Topic(topicName);
+        await EnsureTopic(topic);
+
+        var response = await client.PostAsJsonAsync(Routes.CreateTopicSubscriptionRoute(topicName),
+            new CreateTopicRequestBody(topicSubscriptionName));
+        if (!response.IsSuccessStatusCode && response.StatusCode != HttpStatusCode.Conflict)
+        {
+            var error = await response.Content.ReadAsStringAsync();
+            throw new InvalidOperationException($"Could not create topic subscription: {error}");
         }
     }
 

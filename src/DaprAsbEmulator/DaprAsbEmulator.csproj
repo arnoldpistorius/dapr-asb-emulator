@@ -15,9 +15,16 @@
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="Grpc.AspNetCore" Version="2.51.0" />
+      <PackageReference Include="Grpc.AspNetCore.Server.Reflection" Version="2.51.0" />
       <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="7.0.1" />
       <PackageReference Include="NSwag.AspNetCore" Version="13.18.2" />
       <PackageReference Include="System.Reactive" Version="5.0.0" />
+    </ItemGroup>
+    
+    <ItemGroup>
+        <Protobuf Include="Adapter/DaprPubSub/Protos/dapr/proto/components/v1/pubsub.proto" ProtoRoot="Adapter/DaprPubSub/Protos" GrpcServices="Client,Server" />
+        <Protobuf Include="Adapter/DaprPubSub/Protos/dapr/proto/components/v1/common.proto" ProtoRoot="Adapter/DaprPubSub/Protos" GrpcServices="Client" />
     </ItemGroup>
 
 </Project>

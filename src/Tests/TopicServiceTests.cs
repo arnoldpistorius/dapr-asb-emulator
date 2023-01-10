@@ -185,6 +185,64 @@ public class TopicServiceTests
         getTopic.Should().BeEquivalentTo(topic);
     }
 
+    [Fact]
+    public async Task PublishMessage_ExistingTopic_Succeeds()
+    {
+        // Arrange
+        await EnsureTopic("a-topic");
+        
+        // Act/Assert
+        await service.Awaiting(x => x.PublishMessage("a-topic", "message"))
+            .Should()
+            .NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task PublishMessage_NonExistingTopic_RaisesException()
+    {
+        // Arrange
+        
+        // Act/Assert
+        await service.Awaiting(x => x.PublishMessage("a-topic", "message"))
+            .Should()
+            .ThrowAsync<TopicNotFoundException>();
+    }
+
+    [Fact]
+    public async Task SubscribeTopic_ExistingTopic_Succeeds()
+    {
+        // Arrange
+        await EnsureTopic("a-topic");
+        
+        // Act/Assert
+        await service.Awaiting(x => x.SubscribeTopic("a-topic", "a-subscription"))
+            .Should()
+            .NotThrowAsync();
+    }
+    
+    [Fact]
+    public async Task SubscribeTopic_ExistingTopic_RaisesException()
+    {
+        // Arrange
+        
+        // Act/Assert
+        await service.Awaiting(x => x.SubscribeTopic("a-topic", "a-subscription"))
+            .Should()
+            .ThrowAsync<TopicNotFoundException>();
+    }
+
+    [Fact]
+    public async Task SubscribeTopic_ExistingSubscription_RaisesException()
+    {
+        // Arrange
+        await EnsureTopicSubscription("a-topic", "a-subscription");
+        
+        // Act/Assert
+        await service.Awaiting(x => x.SubscribeTopic("a-topic", "a-subscription"))
+            .Should()
+            .ThrowAsync<TopicSubscriptionAlreadyExistsException>();
+    }
+
     async Task<Topic> EnsureTopic(string topicName)
     {
         try
@@ -194,6 +252,18 @@ public class TopicServiceTests
         catch (TopicAlreadyExistsException)
         {
             return await service.GetTopic(topicName);
+        }
+    }
+
+    async Task EnsureTopicSubscription(string topicName, string subscriptionName)
+    {
+        await EnsureTopic(topicName);
+        try
+        {
+            await service.SubscribeTopic(topicName, subscriptionName);
+        }
+        catch (TopicSubscriptionAlreadyExistsException)
+        {
         }
     }
 }

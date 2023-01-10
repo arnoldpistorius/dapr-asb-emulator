@@ -11,6 +11,7 @@ public static class Routes
     public const string GetTopic = "{" + ParamTopicName + "}";
     public const string CreateTopic = "";
     public const string RemoveTopic = "{" + ParamTopicName + "}";
+    public const string CreateTopicSubscription = "{" + ParamTopicName + "}" + S + "subscription";
 
     public const string ParamTopicName = "topicName";
     
@@ -28,4 +29,8 @@ public static class Routes
     public static string RemoveTopicRoute(string topicName) =>
         Trim(TopicController + S + RemoveTopic)
             .Replace("{" + ParamTopicName + "}", HttpUtility.UrlEncode(topicName));
+
+    public static string CreateTopicSubscriptionRoute(string topicName) =>
+        Trim(TopicController + S + CreateTopicSubscription)
+            .Replace("{" + ParamTopicName + "}", topicName);
 }

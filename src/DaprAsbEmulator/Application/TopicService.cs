@@ -43,6 +43,14 @@ public class TopicService : ITopicService
         var topic = await topicRepository.GetTopic(topicName);
         return topic;
     }
+
+    public Task PublishMessage(string topicName, string message)
+    {
+        return topicRepository.GetTopic(topicName);
+    }
+
+    public Task<TopicSubscription> SubscribeTopic(string topicName, string subscriptionName) => 
+        topicRepository.AddSubscription(new TopicSubscription(subscriptionName, topicName));
 }
 
 public interface ITopicRepository
@@ -51,4 +59,5 @@ public interface ITopicRepository
     Task AddTopic(Topic topic);
     Task RemoveTopic(Topic topic);
     Task<IReadOnlyCollection<Topic>> GetAllTopics();
+    Task<TopicSubscription> AddSubscription(TopicSubscription topicSubscription);
 }

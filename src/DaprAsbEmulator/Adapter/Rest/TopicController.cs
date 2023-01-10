@@ -88,4 +88,28 @@ public class TopicController : ControllerBase
             return Problem(statusCode: StatusCodes.Status500InternalServerError);
         }
     }
+
+    [HttpPost(Routes.CreateTopicSubscription)]
+    public async Task<IActionResult> CreateTopicSubscription([FromRoute(Name = Routes.ParamTopicName)] string topicName, [FromBody] CreateTopicRequestBody body)
+    {
+        topicName = WebUtility.UrlDecode(topicName);
+        try
+        {
+            var domainTopicSubscription = await topicService.SubscribeTopic(topicName, body.SubscriptionName);
+            var topicSubscription = TopicSubscription.FromDomainTopicSubscription(domainTopicSubscription);
+            return Ok(topicSubscription);
+        }
+        catch (TopicNotFoundException exception)
+        {
+            return BadRequest(exception.Message);
+        }
+        catch (TopicSubscriptionAlreadyExistsException exception)
+        {
+            return Conflict(exception.Message);
+        }
+        catch
+        {
+            return Problem(statusCode: StatusCodes.Status500InternalServerError);
+        }
+    }
 }

@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DaprAsbEmulator", "DaprAsbE
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "Tests\Tests.csproj", "{8B821E97-83D2-4F57-8E6F-F4D65F56F64A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestService", "TestService\TestService.csproj", "{7F9D6BC2-0AE6-47E3-90CB-5C56693D2B82}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{8B821E97-83D2-4F57-8E6F-F4D65F56F64A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8B821E97-83D2-4F57-8E6F-F4D65F56F64A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8B821E97-83D2-4F57-8E6F-F4D65F56F64A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7F9D6BC2-0AE6-47E3-90CB-5C56693D2B82}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7F9D6BC2-0AE6-47E3-90CB-5C56693D2B82}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7F9D6BC2-0AE6-47E3-90CB-5C56693D2B82}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7F9D6BC2-0AE6-47E3-90CB-5C56693D2B82}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

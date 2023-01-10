@@ -9,4 +9,6 @@ public interface ITopicService
     Task RemoveTopic(string name);
     Task<ImmutableArray<Topic>> GetAllTopics();
     Task<Topic> GetTopic(string topicName);
+    Task PublishMessage(string topicName, string message);
+    Task<TopicSubscription> SubscribeTopic(string topicName, string subscriptionName);
 }

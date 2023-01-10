@@ -15,4 +15,10 @@ public static class ReaderWriterLockSlimExtensions
         rwLock.EnterWriteLock();
         return Disposable.Create(rwLock, x => x.ExitWriteLock());
     }
+
+    public static IDisposable UpgradableReadLock(this ReaderWriterLockSlim rwLock)
+    {
+        rwLock.EnterUpgradeableReadLock();
+        return Disposable.Create(rwLock, x => x.ExitUpgradeableReadLock());
+    }
 }

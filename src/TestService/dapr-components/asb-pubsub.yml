@@ -1,0 +1,8 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: asb
+spec:
+  type: pubsub.asb-emulator
+  version: v1
+  metadata:
