@@ -1,14 +1,13 @@
-using System.Collections.Immutable;
 using DaprAsbEmulator.Model;
 
 namespace DaprAsbEmulator.Ports;
 
 public interface ITopicService
 {
-    Task<Topic> CreateTopic(string name);
-    Task RemoveTopic(string name);
-    Task<ImmutableArray<Topic>> GetAllTopics();
-    Task<Topic> GetTopic(string topicName);
+    Task<Topic> CreateTopic(string topicName);
     Task PublishMessage(string topicName, string message);
-    Task<TopicSubscription> SubscribeTopic(string topicName, string subscriptionName);
+    Task<TopicSubscription> Subscribe(string topicName, string subscriptionName);
+    Task<Message> Peek(string topicName, string subscriptionName, CancellationToken cancellationToken);
+    Task FailMessage(string topicName, string subscriptionName, Message peekedMessage);
+    Task SucceedMessage(string topicName, string subscriptionName, Message peekedMessage);
 }

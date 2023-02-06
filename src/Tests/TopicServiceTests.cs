@@ -1,269 +1,273 @@
+using System.Reactive.Disposables;
 using DaprAsbEmulator.Adapter.Memory;
 using DaprAsbEmulator.Application;
-using DaprAsbEmulator.Application.Exceptions;
 using DaprAsbEmulator.Model;
 using DaprAsbEmulator.Ports;
+using DaprAsbEmulator.Ports.Exceptions;
 using FluentAssertions;
+using FluentAssertions.Extensions;
+using Microsoft.Extensions.Options;
+using Moq;
 
 namespace Tests;
 
 public class TopicServiceTests
 {
-    readonly ITopicRepository topicRepository;
-    readonly ITopicService service;
+    TopicService Service { get; }
+    Mock<ITopicSubscriptionEvents> TopicSubscriptionEvents { get; } = new();
+
+    Mock<IOptions<TopicRepositorySettings>> Settings { get; } = new();
+
     
     public TopicServiceTests()
     {
-        topicRepository = new TopicRepository();
-        service = new TopicService(topicRepository);
-    }
-    
-    [Fact]
-    public async Task CreateTopic_NewTopic_TopicIsCreated()
-    {
-        // Arrange
-        
-        // Act
-        var createdTopic = await service.CreateTopic("a-topic-name");
-
-        // Assert
-        var expectedTopic = new Topic("a-topic-name");
-        createdTopic.Should().BeEquivalentTo(expectedTopic);
-        
-        var repositoryTopic = await topicRepository.GetTopic("a-topic-name");
-        repositoryTopic.Should().BeEquivalentTo(expectedTopic);
-    }
-
-    [Fact]
-    public async Task CreateTopic_ExistingTopic_TopicIsNotCreated()
-    {
-        // Arrange
-        await EnsureTopic("a-topic-name");
-        
-        // Act/Assert
-        await service.Awaiting(x => x.CreateTopic("a-topic-name"))
-            .Should()
-            .ThrowExactlyAsync<TopicAlreadyExistsException>("The topic is already created");
-    }
-
-    [Theory]
-    [InlineData("foo@bar.com")]
-    [InlineData("")]
-    [InlineData("ATopicNameOfExactly261Characters0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")]
-    [InlineData("Some#HashTag")]
-    [InlineData("TopicNameWith$DollarSign")]
-    [InlineData("TopicNameWith%Percentage")]
-    [InlineData("I'mNotGoingToTestEveryPossibleCharacterIfYouDon'tMind")]
-    [InlineData(".topicHasToStartWithLetterOrNumber")]
-    [InlineData("-topicHasToStartWithLetterOrNumber")]
-    [InlineData("/topicHasToStartWithLetterOrNumber")]
-    [InlineData("_topicHasToStartWithLetterOrNumber")]
-    [InlineData("topicHasToEndWithLetterOrNumber.")]
-    [InlineData("topicHasToEndWithLetterOrNumber-")]
-    [InlineData("topicHasToEndWithLetterOrNumber_")]
-    [InlineData("topicHasToEndWithLetterOrNumber/")]
-    [InlineData(".")]
-    [InlineData("_")]
-    [InlineData("-")]
-    [InlineData("/")]
-    public async Task CreateTopic_InvalidTopicName_TopicIsNotCreated(string topicName)
-    {
-        // Arrange
-        
-        // Act/Assert
-        await service.Awaiting(x => x.CreateTopic(topicName))
-            .Should()
-            .ThrowExactlyAsync<TopicNameValidationFailedException>("The topic name is invalid");
-
-        await topicRepository.Awaiting(x => x.GetTopic(topicName))
-            .Should()
-            .ThrowExactlyAsync<TopicNotFoundException>("The topic should not be created: name is invalid");
-    }
-
-    [Theory]
-    [InlineData("a")]
-    [InlineData("A")]
-    [InlineData("ATopicNameOfExactly260Characters000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")]
-    [InlineData("you/can/use/slashes")]
-    [InlineData("you-can-use-hyphens")]
-    [InlineData("you.can.use.periods")]
-    [InlineData("you_can_use_underscores")]
-    [InlineData("you/can-use_it.all")]
-    [InlineData("1NumberAtStartIsFine")]
-    [InlineData("AllCharactersAllowed-abcdefghijklmnopqrstuvwxyz/ABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789")]
-    public async Task CreateTopic_ValidTopicName_TopicIsCreated(string topicName)
-    {
-        // Arrange
-        
-        // Act/Assert
-        await service.Awaiting(x => x.CreateTopic(topicName))
-            .Should()
-            .NotThrowAsync("The name is valid");
-    }
-
-    [Fact]
-    public async Task RemoveTopic_ExistingTopic_TopicIsRemoved()
-    {
-        // Arrange
-        await EnsureTopic("a-topic-name");
-        
-        // Act
-        await service.RemoveTopic("a-topic-name");
-        
-        // Assert
-        await topicRepository.Awaiting(x => x.GetTopic("a-topic-name"))
-            .Should()
-            .ThrowExactlyAsync<TopicNotFoundException>("The topic was removed");
-    }
-
-    [Fact]
-    public async Task RemoveTopic_NonExistingTopic_ExceptionIsRaised()
-    {
-        // Arrange
-        
-        // Act/Assert
-        await service.Awaiting(x => x.RemoveTopic("a-topic-name"))
-            .Should()
-            .ThrowExactlyAsync<TopicNotFoundException>();
-    }
-
-    [Fact]
-    public async Task GetAllTopics_NoTopics_ReturnsEmptyArray()
-    {
-        // Arrange
-        
-        // Act
-        var allTopics = await service.GetAllTopics();
-        
-        // Assert
-        allTopics.Should().BeEmpty();
-    }
-
-    [Fact]
-    public async Task GetAllTopics_ThreeTopics_ReturnsExactlyThreeTopics()
-    {
-        // Arrange
-        var topic1 = await EnsureTopic("topic1");
-        var topic2 = await EnsureTopic("topic2");
-        var topic3 = await EnsureTopic("topic3");
-        
-        // Act
-        var allTopics = await service.GetAllTopics();
-        
-        // Assert
-        allTopics.Should().HaveCount(3).And.Contain(new[]
+        Settings.Setup(x => x.Value).Returns(new TopicRepositorySettings
         {
-            topic1,
-            topic2,
-            topic3
+            MaxDeliveryAttempts = 10
         });
+        
+        var repository = new InMemoryTopicRepository(Settings.Object);
+        Service = new TopicService(repository, repository, TopicSubscriptionEvents.Object, new ValidatorService());
+    }
+    
+    public static IEnumerable<object[]> ValidTopicNames()
+    {
+        yield return Name("SomeNiceName");
+        yield return Name("SomeNiceNameWithD1g1t5");
+        yield return Name("nice-name-with-dashes");
+        yield return Name("nice/name/with/slashes");
+        
+        object[] Name(string name) =>
+            new object[] { name };
+    }
+
+    public static IEnumerable<object[]> InvalidTopicNames()
+    {
+        yield return Name("@$#$%$%");
+        yield return Name("/test");
+        yield return Name(".HowAreYou");
+        yield return Name("test/test/");
+        
+        object[] Name(string name) =>
+            new object[] { name };
+    }
+
+    [Theory, MemberData(nameof(ValidTopicNames))]
+    public async Task CreateTopic_ValidTopics_SuccessfullyCreated(string topicName)
+    {
+        Func<Task> createTopic = () => Service.CreateTopic(topicName);
+        
+        await createTopic.Should().NotThrowAsync();
+    }
+    
+    [Theory, MemberData(nameof(InvalidTopicNames))]
+    public async Task CreateTopic_InvalidTopics_RaisesArgumentException(string topicName)
+    {
+        Func<Task> createTopic = () => Service.CreateTopic(topicName);
+        
+        await createTopic.Should().ThrowExactlyAsync<ArgumentException>().WithParameterName("topicName");
     }
 
     [Fact]
-    public async Task GetTopic_TopicExists_ReturnsTheTopic()
+    public async Task CreateTopic_Duplicate_RaisesException()
     {
-        // Arrange
-        var topic = await EnsureTopic("a-nice-topic");
-        
-        // Act
-        var getTopic = await service.GetTopic(topic.Name);
-        
-        // Assert
-        getTopic.Should().BeEquivalentTo(topic);
-    }
+        Func<Task> createTopic = () => Service.CreateTopic("a-topic-name");
 
-    [Fact]
-    public async Task GetTopic_TopicWithDifferentCasing_ReturnsTheTopic()
-    {
-        // Arrange
-        var topic = await EnsureTopic("A-Nice-Topic");
-        
-        // Act
-        var getTopic = await service.GetTopic("a-nice-topic");
-        
-        // Assert
-        getTopic.Should().BeEquivalentTo(topic);
-    }
-
-    [Fact]
-    public async Task PublishMessage_ExistingTopic_Succeeds()
-    {
-        // Arrange
-        await EnsureTopic("a-topic");
-        
-        // Act/Assert
-        await service.Awaiting(x => x.PublishMessage("a-topic", "message"))
+        await createTopic.Should().NotThrowAsync();
+        await createTopic
             .Should()
-            .NotThrowAsync();
+            .ThrowExactlyAsync<TopicAlreadyExistsException>()
+            .Where(x => x.TopicName == "a-topic-name");
     }
 
     [Fact]
-    public async Task PublishMessage_NonExistingTopic_RaisesException()
+    public async Task PublishMessage_ValidMessage_Succeeds()
     {
-        // Arrange
-        
-        // Act/Assert
-        await service.Awaiting(x => x.PublishMessage("a-topic", "message"))
-            .Should()
-            .ThrowAsync<TopicNotFoundException>();
+        var topic = await Service.CreateTopic("aTopic");
+
+        Func<Task> publishMessage = () => Service.PublishMessage(topic.Name, "some serialized message");
+
+        await publishMessage.Should().NotThrowAsync();
     }
 
     [Fact]
-    public async Task SubscribeTopic_ExistingTopic_Succeeds()
+    public async Task Subscribe_ValidTopic_Succeeds()
     {
-        // Arrange
-        await EnsureTopic("a-topic");
-        
-        // Act/Assert
-        await service.Awaiting(x => x.SubscribeTopic("a-topic", "a-subscription"))
-            .Should()
-            .NotThrowAsync();
+        var topicName = "aTopic";
+        var subscriptionName = "aSubscription";
+        var topic = await Service.CreateTopic(topicName);
+
+        Func<Task> subscribe = () => Service.Subscribe(topic.Name, subscriptionName);
+
+        await subscribe.Should().NotThrowAsync();
     }
     
     [Fact]
-    public async Task SubscribeTopic_ExistingTopic_RaisesException()
+    public async Task Subscribe_InvalidTopic_Fails()
     {
-        // Arrange
-        
-        // Act/Assert
-        await service.Awaiting(x => x.SubscribeTopic("a-topic", "a-subscription"))
-            .Should()
-            .ThrowAsync<TopicNotFoundException>();
+        var topicName = "aTopic";
+        var subscriptionName = "aSubscription";
+
+        Func<Task> subscribe = () => Service.Subscribe(topicName, subscriptionName);
+
+        await subscribe.Should().ThrowAsync<TopicNotFoundException>().Where(x => x.TopicName == topicName);
     }
 
     [Fact]
-    public async Task SubscribeTopic_ExistingSubscription_RaisesException()
+    public async Task Peek_ValidTopicSubscription_Succeeds()
     {
-        // Arrange
-        await EnsureTopicSubscription("a-topic", "a-subscription");
+        var topicName = "aTopic";
+        var subscriptionName = "aSubscription";
+        await Service.CreateTopic(topicName);
+        await Service.Subscribe(topicName, subscriptionName);
+        using var tokenDisposable = CancellationTokenUtility.CreateDisposableCancellationToken(out _, out var token);
         
-        // Act/Assert
-        await service.Awaiting(x => x.SubscribeTopic("a-topic", "a-subscription"))
+        Func<Task> peek = () => Service.Peek(topicName, subscriptionName, token);
+
+        await peek.Should().NotCompleteWithinAsync(10.Milliseconds());
+    }
+
+    [Fact(Timeout = 1000)]
+    public async Task Peek_InvalidTopic_RaisesException()
+    {
+        var topicName = "aTopic";
+        var subscriptionName = "aSubscription";
+        using var tokenDisposable = CancellationTokenUtility.CreateDisposableCancellationToken(out _, out var token);
+
+        Func<Task> peek = () => Service.Peek(topicName, subscriptionName, token);
+
+        await peek
             .Should()
-            .ThrowAsync<TopicSubscriptionAlreadyExistsException>();
+            .ThrowExactlyAsync<TopicNotFoundException>()
+            .Where(x => x.TopicName == topicName);
+    }
+    
+    [Fact(Timeout = 1000)]
+    public async Task Peek_InvalidSubscription_RaisesException()
+    {
+        var topicName = "aTopic";
+        var subscriptionName = "aSubscription";
+        var topic = await Service.CreateTopic(topicName);
+        using var tokenDisposable = CancellationTokenUtility.CreateDisposableCancellationToken(out _, out var token);
+
+        Func<Task> peek = () => Service.Peek(topic.Name, subscriptionName, token);
+
+        await peek
+            .Should()
+            .ThrowExactlyAsync<TopicSubscriptionNotFoundException>()
+            .Where(x => x.TopicName == topic.Name && x.SubscriptionName == subscriptionName);
     }
 
-    async Task<Topic> EnsureTopic(string topicName)
+    [Fact(Timeout = 1000)]
+    public async Task Peek_PublishedMessage_ReturnsMessage()
     {
-        try
-        {
-            return await service.CreateTopic(topicName);
-        }
-        catch (TopicAlreadyExistsException)
-        {
-            return await service.GetTopic(topicName);
-        }
+        var topicName = "aTopic";
+        var subscriptionName = "aSubscription";
+        var message = "Hello World!";
+        var topic = await Service.CreateTopic(topicName);
+        var subscription = await Service.Subscribe(topic.Name, subscriptionName);
+        using var tokenDisposable = CancellationTokenUtility.CreateDisposableCancellationToken(out _, out var token);
+        await Service.PublishMessage(topic.Name, message);
+        
+        var peekMessage = await Service.Peek(topic.Name, subscription.SubscriptionName, token);
+
+        peekMessage.Value.Should().BeEquivalentTo(message);
+    }
+    
+    [Fact(Timeout = 1000)]
+    public async Task Peek_PublishedMessageSecondTime_DoesntReturnMessage()
+    {
+        var topicName = "aTopic";
+        var subscriptionName = "aSubscription";
+        var message = "Hello World!";
+        var topic = await Service.CreateTopic(topicName);
+        var subscription = await Service.Subscribe(topic.Name, subscriptionName);
+        using var tokenDisposable = CancellationTokenUtility.CreateDisposableCancellationToken(out _, out var token);
+        await Service.PublishMessage(topic.Name, message);
+        await Service.Peek(topic.Name, subscription.SubscriptionName, token);
+
+        await Service.Awaiting(x => x.Peek(topic.Name, subscription.SubscriptionName, token))
+            .Should()
+            .NotCompleteWithinAsync(10.Milliseconds());
     }
 
-    async Task EnsureTopicSubscription(string topicName, string subscriptionName)
+    [Fact(Timeout = 1000)]
+    public async Task FailMessage_PeekedMessage_MessageCanBePeekedAgain()
     {
-        await EnsureTopic(topicName);
-        try
+        var topicName = "aTopic";
+        var subscriptionName = "aSubscription";
+        var message = "Hello World!";
+        var topic = await Service.CreateTopic(topicName);
+        var subscription = await Service.Subscribe(topic.Name, subscriptionName);
+        using var tokenDisposable = CancellationTokenUtility.CreateDisposableCancellationToken(out _, out var token);
+        await Service.PublishMessage(topic.Name, message);
+        var peekedMessage = await Service.Peek(topic.Name, subscription.SubscriptionName, token);
+
+        await Service.FailMessage(topic.Name, subscription.SubscriptionName, peekedMessage);
+
+        var peekedMessage2 = await Service.Peek(topic.Name, subscription.SubscriptionName, token);
+        peekedMessage2.Id.Should().Be(peekedMessage.Id);
+        peekedMessage2.Value.Should().BeEquivalentTo(message);
+    }
+
+    [Fact(Timeout = 1000)]
+    public async Task SucceedMessage_PeekedMessage_Succeeds()
+    {
+        var topicName = "aTopic";
+        var subscriptionName = "aSubscription";
+        var message = "Hello World!";
+        var topic = await Service.CreateTopic(topicName);
+        var subscription = await Service.Subscribe(topic.Name, subscriptionName);
+        using var tokenDisposable = CancellationTokenUtility.CreateDisposableCancellationToken(out _, out var token);
+        await Service.PublishMessage(topic.Name, message);
+        var peekedMessage = await Service.Peek(topic.Name, subscription.SubscriptionName, token);
+
+        await Service.Awaiting(x => x.SucceedMessage(topic.Name, subscription.SubscriptionName, peekedMessage))
+            .Should()
+            .NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task FailMessage_ForMaxDeliveryAttempts_RaisesDeadLetter()
+    {
+        var topicName = "aTopic";
+        var subscriptionName = "aSubscription";
+        var message = "Hello World!";
+        var topic = await Service.CreateTopic(topicName);
+        var subscription = await Service.Subscribe(topic.Name, subscriptionName);
+        using var tokenDisposable = CancellationTokenUtility.CreateDisposableCancellationToken(out _, out var token);
+        await Service.PublishMessage(topic.Name, message);
+
+        Message? peekedMessage = null;
+
+        for (int i = 0; i < Settings.Object.Value.MaxDeliveryAttempts; i++)
         {
-            await service.SubscribeTopic(topicName, subscriptionName);
+            var newPeekedMessage = await Service.Peek(topic.Name, subscription.SubscriptionName, token);
+            if (peekedMessage != null)
+            {
+                newPeekedMessage.Id.Should().Be(peekedMessage.Id);
+            }
+
+            peekedMessage = newPeekedMessage;
+            await Service.FailMessage(topic.Name, subscription.SubscriptionName, peekedMessage);
         }
-        catch (TopicSubscriptionAlreadyExistsException)
+
+        peekedMessage.Should().NotBeNull();
+        TopicSubscriptionEvents.Verify(x => x.OnDeadLetterMessage(peekedMessage!), Times.Once);
+    }
+}
+
+public static class CancellationTokenUtility
+{
+    public static IDisposable CreateDisposableCancellationToken(out CancellationTokenSource cancellationTokenSource,
+        out CancellationToken cancellationToken)
+    {
+        cancellationTokenSource = new CancellationTokenSource();
+        cancellationToken = cancellationTokenSource.Token;
+        return Disposable.Create(cancellationTokenSource, cts =>
         {
-        }
+            cts.Cancel();
+            cts.Dispose();
+        });
     }
 }

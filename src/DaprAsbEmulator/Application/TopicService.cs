@@ -1,63 +1,119 @@
-using System.Collections.Immutable;
-using DaprAsbEmulator.Application.Exceptions;
 using DaprAsbEmulator.Model;
 using DaprAsbEmulator.Ports;
+using DaprAsbEmulator.Ports.Exceptions;
 
 namespace DaprAsbEmulator.Application;
 
 public class TopicService : ITopicService
 {
-    readonly ITopicRepository topicRepository;
+    IValidatorService ValidatorService { get; }
+    ITopicRepository Topics { get; }
+    ISubscriptionRepository Subscriptions { get; }
+    ITopicSubscriptionEvents TopicSubscriptionEvents { get; }
 
-    public TopicService(ITopicRepository topicRepository)
+    public TopicService(ITopicRepository topicRepository, ISubscriptionRepository subscriptionRepository, ITopicSubscriptionEvents topicSubscriptionEvents, IValidatorService validatorService)
     {
-        this.topicRepository = topicRepository;
+        ValidatorService = validatorService;
+        Topics = topicRepository;
+        Subscriptions = subscriptionRepository;
+        TopicSubscriptionEvents = topicSubscriptionEvents;
     }
-    
-    public async Task<Topic> CreateTopic(string name)
+
+    public async Task<Topic> CreateTopic(string topicName)
     {
-        var topic = new Topic(name);
-        if (!topic.IsValidName())
+        if (!await ValidatorService.IsValidTopicName(topicName))
         {
-            throw new TopicNameValidationFailedException(name);
+            throw new ArgumentException("Topic name is invalid", nameof(topicName));
         }
-        
-        await topicRepository.AddTopic(topic);
+
+        var topic = new Topic(topicName);
+        if (!await Topics.CreateTopic(topic))
+        {
+            throw new TopicAlreadyExistsException(topicName);
+        }
         return topic;
     }
 
-    public async Task RemoveTopic(string name)
+    public async Task PublishMessage(string topicName, string message)
     {
-        var topic = await topicRepository.GetTopic(name);
-        await topicRepository.RemoveTopic(topic);
+        var topic = await Topics.GetTopic(topicName);
+        if (topic == null)
+        {
+            throw new TopicNotFoundException(topicName);
+        }
+
+        await Topics.PublishMessage(topic.Name, message);
     }
 
-    public async Task<ImmutableArray<Topic>> GetAllTopics()
+    public async Task<TopicSubscription> Subscribe(string topicName, string subscriptionName)
     {
-        var topics = await topicRepository.GetAllTopics();
-        return topics.ToImmutableArray();
+        var topic = await Topics.GetTopic(topicName);
+        if (topic == null)
+        {
+            throw new TopicNotFoundException(topicName);
+        }
+
+        var topicSubscription = new TopicSubscription(topicName, subscriptionName);
+        if (!await Subscriptions.CreateSubscription(topicSubscription))
+        {
+            throw new TopicSubscriptionAlreadyExistsException(topicName, subscriptionName);
+        }
+
+        return topicSubscription;
     }
 
-    public async Task<Topic> GetTopic(string topicName)
+    public async Task<Message> Peek(string topicName, string subscriptionName, CancellationToken cancellationToken)
     {
-        var topic = await topicRepository.GetTopic(topicName);
-        return topic;
+        var topic = await Topics.GetTopic(topicName);
+        if (topic == null)
+        {
+            throw new TopicNotFoundException(topicName);
+        }
+
+        var subscription = await Subscriptions.GetSubscription(topicName, subscriptionName);
+        if(subscription == null)
+        {
+            throw new TopicSubscriptionNotFoundException(topicName, subscriptionName);
+        }
+
+        return await Subscriptions.PeekMessage(topic.Name, subscription.SubscriptionName, cancellationToken);
     }
 
-    public Task PublishMessage(string topicName, string message)
+    public async Task FailMessage(string topicName, string subscriptionName, Message peekedMessage)
     {
-        return topicRepository.GetTopic(topicName);
+        var topic = await Topics.GetTopic(topicName);
+        if (topic == null)
+        {
+            throw new TopicNotFoundException(topicName);
+        }
+
+        var subscription = await Subscriptions.GetSubscription(topicName, subscriptionName);
+        if(subscription == null)
+        {
+            throw new TopicSubscriptionNotFoundException(topicName, subscriptionName);
+        }
+
+        var result = Subscriptions.FailMessage(topic.Name, subscription.SubscriptionName, peekedMessage);
+        if (result is FailMessageResult.DeadLetter)
+        {
+            await TopicSubscriptionEvents.OnDeadLetterMessage(peekedMessage);
+        }
     }
 
-    public Task<TopicSubscription> SubscribeTopic(string topicName, string subscriptionName) => 
-        topicRepository.AddSubscription(new TopicSubscription(subscriptionName, topicName));
-}
+    public async Task SucceedMessage(string topicName, string subscriptionName, Message peekedMessage)
+    {
+        var topic = await Topics.GetTopic(topicName);
+        if (topic == null)
+        {
+            throw new TopicNotFoundException(topicName);
+        }
 
-public interface ITopicRepository
-{
-    Task<Topic> GetTopic(string name);
-    Task AddTopic(Topic topic);
-    Task RemoveTopic(Topic topic);
-    Task<IReadOnlyCollection<Topic>> GetAllTopics();
-    Task<TopicSubscription> AddSubscription(TopicSubscription topicSubscription);
+        var subscription = await Subscriptions.GetSubscription(topicName, subscriptionName);
+        if(subscription == null)
+        {
+            throw new TopicSubscriptionNotFoundException(topicName, subscriptionName);
+        }
+
+        Subscriptions.SucceedMessage(topic.Name, subscription.SubscriptionName, peekedMessage);
+    }
 }

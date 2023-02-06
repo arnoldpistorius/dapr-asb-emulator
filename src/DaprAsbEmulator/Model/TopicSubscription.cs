@@ -1,3 +1,13 @@
 namespace DaprAsbEmulator.Model;
 
-public record TopicSubscription(string Name, string TopicName);
+public class TopicSubscription
+{
+    public string TopicName { get; }
+    public string SubscriptionName { get; }
+
+    public TopicSubscription(string topicName, string subscriptionName)
+    {
+        TopicName = topicName;
+        SubscriptionName = subscriptionName;
+    }
+}
