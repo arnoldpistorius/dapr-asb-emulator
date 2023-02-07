@@ -15,6 +15,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="Dapr.PluggableComponents.AspNetCore" Version="0.0.0-rc.0.6" />
       <PackageReference Include="Grpc.AspNetCore" Version="2.51.0" />
       <PackageReference Include="Grpc.AspNetCore.Server.Reflection" Version="2.51.0" />
       <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="7.0.1" />
