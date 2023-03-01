@@ -1,17 +1,27 @@
-﻿var builder = WebApplication.CreateBuilder(args);
-// builder.ConfigureDaprSocket();
-builder.WebHost.ConfigureKestrel(kestrel =>
-{
-    kestrel.ListenAnyIP(5555); // todo this should be configurable
-});
+﻿using DaprAsbEmulator.Adapter.Grpc;
+using DaprAsbEmulator.Adapter.Memory;
+using DaprAsbEmulator.Application;
+using DaprAsbEmulator.Ports;
+
+var builder = WebApplication.CreateBuilder(args);
 
 var services = builder.Services;
 
 services.AddSwaggerDocument()
-    .AddControllers();
+    .Configure<TopicRepositorySettings>(builder.Configuration.GetSection("TopicRepositorySettings"))
+    .AddTransient<ITopicService, TopicService>()
+    .AddSingleton<InMemoryTopicRepository>()
+    .AddSingleton<ITopicRepository>(svc => svc.GetRequiredService<InMemoryTopicRepository>())
+    .AddSingleton<ISubscriptionRepository>(svc => svc.GetRequiredService<InMemoryTopicRepository>())
+    .AddSingleton<ITopicSubscriptionEvents>(svc => svc.GetRequiredService<InMemoryTopicRepository>())
+    .AddTransient<IValidatorService, ValidatorService>()
+    .AddControllers()
+    .Services
+    .AddGrpc();
 
 var app = builder.Build();
-// app.MapDaprGrpc();
+
+app.MapGrpcService<TopicsController>();
 app.MapControllers();
 app.UseOpenApi();
 app.UseSwaggerUi3();

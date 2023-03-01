@@ -10,4 +10,7 @@ public class Topic
     {
         Name = name;
     }
+    
+    // ToString() is used in the logs
+    public override string ToString() => $"Topic {{ Name: {Name} }}";
 }

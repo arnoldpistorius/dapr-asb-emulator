@@ -10,4 +10,7 @@ public class Message
         Id = id;
         Value = value;
     }
+    
+    // ToString() is used in the logs
+    public override string ToString() => $"Message {{ Id: {Id}, Value: {Value} }}";
 }

@@ -1,18 +1,21 @@
 using Dapr.PluggableComponents.Components;
 using Dapr.PluggableComponents.Components.PubSub;
 
-namespace DaprAsbEmulator.Adapter.DaprPubSub;
+namespace DaprAsbEmulatorPluggableComponent;
 
-public class AsbPubSub : IPubSub
+public class AsbEmulatorPubSub : IPubSub
 {
+    string consumerId;
+
     public Task InitAsync(MetadataRequest request, CancellationToken cancellationToken = new CancellationToken())
     {
-        throw new NotImplementedException();
+        _ = request.Properties.TryGetValue("consumerID", out consumerId);
+        return Task.CompletedTask;
     }
 
     public Task PublishAsync(PubSubPublishRequest request, CancellationToken cancellationToken = new CancellationToken())
     {
-        throw new NotImplementedException();
+        
     }
 
     public Task PullMessagesAsync(PubSubPullMessagesTopic topic, MessageDeliveryHandler<string?, PubSubPullMessagesResponse> deliveryHandler,

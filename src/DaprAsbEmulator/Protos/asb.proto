@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+option csharp_namespace = "DaprAsbEmulator.Adapter.Grpc";
+package asbemulator;
+
+service Topics {
+  rpc CreateTopic(CreateTopicRequest) returns (CreateTopicResponse) {}
+  rpc SubscribeTopic(SubscribeTopicRequest) returns (SubscribeTopicResponse) {}
+  rpc PublishMessage(PublishMessageRequest) returns (PublishMessageResponse) {}
+  rpc PeekMessage(PeekMessageRequest) returns (stream PeekMessageResponse) {}
+}
+
+message CreateTopicRequest {
+  string topicName = 1;
+}
+
+message CreateTopicResponse {
+  string topicName = 1;
+}
+
+message SubscribeTopicRequest {
+  string topicName = 1;
+  string subscriptionName = 2;
+}
+
+message SubscribeTopicResponse {
+  string topicName = 1;
+  string subscriptionName = 2;
+}
+
+message PublishMessageRequest {
+  string topicName = 1;
+  string subscriptionName = 2;
+  string message = 3;
+}
+
+message PublishMessageResponse {
+}
+
+message PeekMessageRequest {
+  string topicName = 1;
+  string subscriptionName = 2;
+}
+
+message PeekMessageResponse {
+  string message = 1;
+}

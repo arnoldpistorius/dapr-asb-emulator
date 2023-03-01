@@ -26,7 +26,7 @@ public class TopicServiceTests
             MaxDeliveryAttempts = 10
         });
         
-        var repository = new InMemoryTopicRepository(Settings.Object);
+        var repository = new InMemoryTopicRepository(Settings.Object, Mock.Of<ILogger<InMemoryTopicRepository>>());
         Service = new TopicService(repository, repository, TopicSubscriptionEvents.Object, new ValidatorService());
     }
     
@@ -254,6 +254,65 @@ public class TopicServiceTests
 
         peekedMessage.Should().NotBeNull();
         TopicSubscriptionEvents.Verify(x => x.OnDeadLetterMessage(peekedMessage!), Times.Once);
+    }
+
+    [Fact]
+    public async Task ConcurrencyTest()
+    {
+        await Service.CreateTopic("topic");
+        await Service.Subscribe("topic", "consumer1");
+        await Service.Subscribe("topic", "consumer2");
+
+        var startToken = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var count = 100000;
+        var read1 = Parallel.ForEachAsync(Enumerable.Range(0, count), async (_, ct) =>
+        {
+            await startToken.Task;
+            var peek = await Service.Peek("topic", "consumer1", ct);
+            await Service.SucceedMessage("topic", "consumer1", peek);
+        });
+        var read2 = Parallel.ForEachAsync(Enumerable.Range(0, count), async (_, ct) =>
+        {
+            await startToken.Task;
+            var peek = await Service.Peek("topic", "consumer2", ct);
+            await Service.SucceedMessage("topic", "consumer2", peek);
+        });
+
+        var publish = Parallel.ForEachAsync(Enumerable.Range(0, count), async (i, ct) =>
+        {
+            await startToken.Task;
+            await Service.PublishMessage("topic", $"Message {i}");
+        });
+
+        startToken.SetResult();
+        await publish;
+        await read1;
+        await read2;
+    }
+    
+    [Fact]
+    public async Task GetTopics_NoTopics_ReturnsEmptyList()
+    {
+        // Arrange
+        var topics = await Service.GetTopics();
+
+        // Assert
+        topics.Should().BeEmpty();
+    }
+    
+    [Fact]
+    public async Task GetTopics_OneTopic_ReturnsTopic()
+    {
+        // Arrange
+        var topicName = "aTopic";
+        await Service.CreateTopic(topicName);
+
+        // Act
+        var topics = await Service.GetTopics();
+
+        // Assert
+        topics.Should().HaveCount(1);
+        topics.Should().Contain(x => x.Name == topicName);
     }
 }
 

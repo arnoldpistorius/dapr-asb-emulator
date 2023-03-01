@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using DaprAsbEmulator.Model;
 
 namespace DaprAsbEmulator.Ports;
@@ -10,4 +11,5 @@ public interface ITopicService
     Task<Message> Peek(string topicName, string subscriptionName, CancellationToken cancellationToken);
     Task FailMessage(string topicName, string subscriptionName, Message peekedMessage);
     Task SucceedMessage(string topicName, string subscriptionName, Message peekedMessage);
+    Task<ImmutableList<Topic>> GetTopics();
 }

@@ -9,24 +9,21 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <ProtoBuf Include="Protos/asb.proto" GrpcServices="Server" />
+    </ItemGroup>
+    
+    <ItemGroup>
       <Content Include="..\.dockerignore">
         <Link>.dockerignore</Link>
       </Content>
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Dapr.PluggableComponents.AspNetCore" Version="0.0.0-rc.0.6" />
       <PackageReference Include="Grpc.AspNetCore" Version="2.51.0" />
-      <PackageReference Include="Grpc.AspNetCore.Server.Reflection" Version="2.51.0" />
       <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="7.0.1" />
       <PackageReference Include="Nito.AsyncEx" Version="5.1.2" />
       <PackageReference Include="NSwag.AspNetCore" Version="13.18.2" />
       <PackageReference Include="System.Reactive" Version="5.0.0" />
-    </ItemGroup>
-    
-    <ItemGroup>
-        <Protobuf Include="Adapter/DaprPubSub/Protos/dapr/proto/components/v1/pubsub.proto" ProtoRoot="Adapter/DaprPubSub/Protos" GrpcServices="Client,Server" />
-        <Protobuf Include="Adapter/DaprPubSub/Protos/dapr/proto/components/v1/common.proto" ProtoRoot="Adapter/DaprPubSub/Protos" GrpcServices="Client" />
     </ItemGroup>
 
 </Project>

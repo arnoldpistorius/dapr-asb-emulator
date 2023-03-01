@@ -10,4 +10,7 @@ public class TopicSubscription
         TopicName = topicName;
         SubscriptionName = subscriptionName;
     }
+    
+    // ToString() is used in the logs
+    public override string ToString() => $"TopicSubscription {{ TopicName: {TopicName}, SubscriptionName: {SubscriptionName} }}";
 }

@@ -5,18 +5,15 @@
         <TargetFramework>net7.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     </PropertyGroup>
 
     <ItemGroup>
-      <Content Include="..\.dockerignore">
-        <Link>.dockerignore</Link>
-      </Content>
+      <PackageReference Include="Dapr.PluggableComponents.AspNetCore" Version="0.1.0" />
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Dapr.AspNetCore" Version="1.9.0" />
-      <PackageReference Include="Man.Dapr.Sidekick.AspNetCore" Version="1.2.1" />
+      <Folder Include="Adapter\AsbEmulator" />
+      <Folder Include="Protos" />
     </ItemGroup>
 
 </Project>

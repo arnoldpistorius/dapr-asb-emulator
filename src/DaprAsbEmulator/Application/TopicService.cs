@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using DaprAsbEmulator.Model;
 using DaprAsbEmulator.Ports;
 using DaprAsbEmulator.Ports.Exceptions;
@@ -115,5 +116,10 @@ public class TopicService : ITopicService
         }
 
         Subscriptions.SucceedMessage(topic.Name, subscription.SubscriptionName, peekedMessage);
+    }
+
+    public async Task<ImmutableList<Topic>> GetTopics()
+    {
+        return await Topics.GetTopics();
     }
 }

@@ -1,16 +1,19 @@
 using System.Collections.Concurrent;
+using System.Collections.Immutable;
 using DaprAsbEmulator.Model;
 using DaprAsbEmulator.Ports;
 using Microsoft.Extensions.Options;
 
 namespace DaprAsbEmulator.Adapter.Memory;
 
-public sealed class InMemoryTopicRepository : ITopicRepository, ISubscriptionRepository
+public sealed class InMemoryTopicRepository : ITopicRepository, ISubscriptionRepository, ITopicSubscriptionEvents
 {
+    readonly ILogger<InMemoryTopicRepository> logger;
     TopicRepositorySettings Settings { get; }
     
-    public InMemoryTopicRepository(IOptions<TopicRepositorySettings> settings)
+    public InMemoryTopicRepository(IOptions<TopicRepositorySettings> settings, ILogger<InMemoryTopicRepository> logger)
     {
+        this.logger = logger;
         Settings = settings.Value;
     }
 
@@ -34,6 +37,12 @@ public sealed class InMemoryTopicRepository : ITopicRepository, ISubscriptionRep
             subscription.Messages.Enqueue(message);
             return ValueTask.CompletedTask;
         });
+    }
+
+    public Task<ImmutableList<Topic>> GetTopics()
+    {
+        var topics = Topics.Values.Select(topic => new Topic(topic.Name)).ToImmutableList();
+        return Task.FromResult(topics);
     }
 
     public async Task<Message> PeekMessage(string topicName, string subscriptionName, CancellationToken cancellationToken)
@@ -99,5 +108,12 @@ public sealed class InMemoryTopicRepository : ITopicRepository, ISubscriptionRep
         }
 
         subscription.Messages.Succeed(peekedMessage.Id);
+    }
+
+    public Task OnDeadLetterMessage(Message deadLetterMessage)
+    {
+        // Log deadLetterMessage
+        logger.LogWarning("Dead letter message: {Message}", deadLetterMessage);
+        return Task.CompletedTask;
     }
 }
