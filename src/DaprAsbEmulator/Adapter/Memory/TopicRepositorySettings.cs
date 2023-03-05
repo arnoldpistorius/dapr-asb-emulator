@@ -2,5 +2,5 @@ namespace DaprAsbEmulator.Adapter.Memory;
 
 public class TopicRepositorySettings
 {
-    public int MaxDeliveryAttempts { get; init; } = 1;
+    public int MaxDeliveryAttempts { get; set; } = 1;
 }

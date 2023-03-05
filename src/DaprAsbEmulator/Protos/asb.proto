@@ -8,6 +8,8 @@ service Topics {
   rpc SubscribeTopic(SubscribeTopicRequest) returns (SubscribeTopicResponse) {}
   rpc PublishMessage(PublishMessageRequest) returns (PublishMessageResponse) {}
   rpc PeekMessage(PeekMessageRequest) returns (stream PeekMessageResponse) {}
+  rpc SucceedMessage(SucceedMessageRequest) returns (SucceedMessageResponse) {}
+  rpc FailMessage(FailMessageRequest) returns (FailMessageResponse) {}
 }
 
 message CreateTopicRequest {
@@ -40,8 +42,28 @@ message PublishMessageResponse {
 message PeekMessageRequest {
   string topicName = 1;
   string subscriptionName = 2;
+  int32 maxMessages = 3;
 }
 
 message PeekMessageResponse {
-  string message = 1;
+  string messageId = 1;
+  string value = 2;
+}
+
+message SucceedMessageRequest {
+  string topicName = 1;
+  string subscriptionName = 2;
+  string messageId = 3;
+}
+
+message SucceedMessageResponse {
+}
+
+message FailMessageRequest {
+  string topicName = 1;
+  string subscriptionName = 2;
+  string messageId = 3;
+}
+
+message FailMessageResponse {
 }

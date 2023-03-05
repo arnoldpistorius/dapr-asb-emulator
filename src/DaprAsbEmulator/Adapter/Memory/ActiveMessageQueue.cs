@@ -65,6 +65,7 @@ public class ActiveMessageQueue
         
         peekedMessage.IncrementAttemptCount();
         Messages.Enqueue(peekedMessage);
+        MessageEnqueued?.Invoke(this, EventArgs.Empty);
         return RepositoryFailMessageResult.RetryScheduled;
     }
 

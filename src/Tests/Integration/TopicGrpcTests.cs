@@ -1,5 +1,6 @@
 using System.Reactive.Linq;
 using DaprAsbEmulator.Adapter.Grpc;
+using DaprAsbEmulator.Adapter.Memory;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Grpc.Core;
@@ -16,6 +17,10 @@ public class TopicGrpcTests
     public TopicGrpcTests()
     {
         var factory = new WebApplicationFactory<Program>();
+        factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureServices(x => x.Configure<TopicRepositorySettings>(y => y.MaxDeliveryAttempts = 10));
+        });
         var grpcOptions = new GrpcChannelOptions
         {
             HttpHandler = factory.Server.CreateHandler()
@@ -179,7 +184,8 @@ public class TopicGrpcTests
         var stream = client.PeekMessage(new PeekMessageRequest()
         {
             SubscriptionName = subscriptionName,
-            TopicName = topicName
+            TopicName = topicName,
+            MaxMessages = 1
         });
 
         int count = 0;
@@ -228,7 +234,8 @@ public class TopicGrpcTests
         var stream = client.PeekMessage(new PeekMessageRequest()
         {
             SubscriptionName = subscriptionName,
-            TopicName = topicName
+            TopicName = topicName,
+            MaxMessages = 1
         });
 
         int count = 0;
@@ -282,7 +289,8 @@ public class TopicGrpcTests
         var stream = client.PeekMessage(new PeekMessageRequest()
         {
             SubscriptionName = subscriptionName,
-            TopicName = topicName
+            TopicName = topicName,
+            MaxMessages = 2
         });
 
         int count = 0;
@@ -301,5 +309,175 @@ public class TopicGrpcTests
 
         // Assert
         count.Should().Be(2);
+    }
+    
+    [Fact]
+    public async Task Peek_TwoMessagesPublishedReceiveOneMessage_OneMessageReceived()
+    {
+        // Arrange
+        var topicName = "test-topic";
+        var subscriptionName = "test-subscription";
+        var testMessage = "This is a test message.";
+
+        await client.CreateTopicAsync(new()
+        {
+            TopicName = topicName
+        });
+        await client.SubscribeTopicAsync(new()
+        {
+            TopicName = topicName,
+            SubscriptionName = subscriptionName
+        });
+        await client.PublishMessageAsync(new()
+        {
+            TopicName = topicName,
+            Message = testMessage
+        });
+        await client.PublishMessageAsync(new()
+        {
+            TopicName = topicName,
+            Message = testMessage
+        });
+
+        using var cancellationTokenSource = new CancellationTokenSource(1.Seconds());
+        // Act
+        var stream = client.PeekMessage(new PeekMessageRequest()
+        {
+            SubscriptionName = subscriptionName,
+            TopicName = topicName,
+            MaxMessages = 1
+        });
+
+        int count = 0;
+
+        try
+        {
+            await foreach (var message in stream.ResponseStream.ReadAllAsync(cancellationTokenSource.Token))
+            {
+                count++;
+            }
+        }
+        catch (RpcException e) when(e.StatusCode == StatusCode.Cancelled)
+        {
+            // doe
+        }
+
+        // Assert
+        count.Should().Be(1);
+    }
+    
+    [Fact]
+    public async Task SucceedMessage_ExistingPeekedMessage_MessageNotReceivedTwice()
+    {
+        // Arrange
+        var topicName = "test-topic";
+        var subscriptionName = "test-subscription";
+        var testMessage = "This is a test message.";
+
+        await client.CreateTopicAsync(new()
+        {
+            TopicName = topicName
+        });
+        await client.SubscribeTopicAsync(new()
+        {
+            TopicName = topicName,
+            SubscriptionName = subscriptionName
+        });
+        await client.PublishMessageAsync(new()
+        {
+            TopicName = topicName,
+            Message = testMessage
+        });
+
+        using var cancellationTokenSource = new CancellationTokenSource(1.Seconds());
+        // Act
+        var stream = client.PeekMessage(new PeekMessageRequest()
+        {
+            SubscriptionName = subscriptionName,
+            TopicName = topicName,
+            MaxMessages = 1
+        });
+
+        int count = 0;
+
+        try
+        {
+            await foreach (var message in stream.ResponseStream.ReadAllAsync(cancellationTokenSource.Token))
+            {
+                count++;
+                await client.SucceedMessageAsync(new SucceedMessageRequest()
+                {
+                    SubscriptionName = subscriptionName,
+                    TopicName = topicName,
+                    MessageId = message.MessageId
+                });
+            }
+        }
+        catch (RpcException e) when(e.StatusCode == StatusCode.Cancelled)
+        {
+            // doe
+        }
+
+        // Assert
+        count.Should().Be(1);
+    }
+    
+    [Fact]
+    public async Task FailMessage_ExistingPeekedMessage_MessageReceivedTwice()
+    {
+        // Arrange
+        var topicName = "test-topic";
+        var subscriptionName = "test-subscription";
+        var testMessage = "This is a test message.";
+
+        await client.CreateTopicAsync(new()
+        {
+            TopicName = topicName
+        });
+        await client.SubscribeTopicAsync(new()
+        {
+            TopicName = topicName,
+            SubscriptionName = subscriptionName
+        });
+        await client.PublishMessageAsync(new()
+        {
+            TopicName = topicName,
+            Message = testMessage
+        });
+
+        using var cancellationTokenSource = new CancellationTokenSource(1000.Seconds());
+        // Act
+        var stream = client.PeekMessage(new PeekMessageRequest()
+        {
+            SubscriptionName = subscriptionName,
+            TopicName = topicName,
+            MaxMessages = 2
+        });
+
+        int count = 0;
+        List<PeekMessageResponse> messages = new();
+
+        try
+        {
+            await foreach (var message in stream.ResponseStream.ReadAllAsync(cancellationTokenSource.Token))
+            {
+                messages.Add(message);
+                count++;
+                await client.FailMessageAsync(new FailMessageRequest()
+                {
+                    SubscriptionName = subscriptionName,
+                    TopicName = topicName,
+                    MessageId = message.MessageId
+                });
+            }
+        }
+        catch (RpcException e) when(e.StatusCode == StatusCode.Cancelled)
+        {
+            // doe
+        }
+
+        // Assert
+        count.Should().Be(2);
+        messages[1].Value.Should().Be(testMessage);
     }
 }

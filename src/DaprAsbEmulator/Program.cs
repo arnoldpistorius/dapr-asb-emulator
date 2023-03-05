@@ -6,7 +6,11 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.WebHost.ConfigureKestrel(options => options.ListenLocalhost(5000, o => o.Protocols = HttpProtocols.Http2));
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenLocalhost(5000, o => o.Protocols = HttpProtocols.Http1);
+    options.ListenLocalhost(5001, o => o.Protocols = HttpProtocols.Http2);
+});
 
 var services = builder.Services;
 
@@ -18,16 +22,16 @@ services.AddSwaggerDocument()
     .AddSingleton<ISubscriptionRepository>(svc => svc.GetRequiredService<InMemoryTopicRepository>())
     .AddSingleton<ITopicSubscriptionEvents>(svc => svc.GetRequiredService<InMemoryTopicRepository>())
     .AddTransient<IValidatorService, ValidatorService>()
-    // .AddControllers()
-    // .Services
+    .AddControllers()
+    .Services
     .AddGrpc();
 
 var app = builder.Build();
 
 app.MapGrpcService<TopicsController>();
-// app.MapControllers();
-// app.UseOpenApi();
-// app.UseSwaggerUi3();
+app.MapControllers();
+app.UseOpenApi();
+app.UseSwaggerUi3();
 
 await app.RunAsync();
 
